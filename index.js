@@ -1,94 +1,41 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-import OpenAI from "openai";
+import bodyParser from "body-parser";
 
-dotenv.config();
 
 const app = express();
+
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+
+app.get("/", (req, res) => {
+  res.json({ status: "API is running 🚀" });
 });
 
-// Middleware API KEY
-app.use((req, res, next) => {
-  const apiKey = req.headers["x-rapidapi-key"];
-  if (!apiKey) {
-    return res.status(401).json({ error: "Missing API Key" });
-  }
-  next();
-});
 
-// 🧠 Detect AI
-app.post("/detect", async (req, res) => {
+app.post("/detect", (req, res) => {
   const { text } = req.body;
-  if (!text) return res.status(400).json({ error: "Text required" });
+  if (!text) return res.status(400).json({ error: "text required" });
 
-  const aiScore = Math.floor(Math.random() * 40) + 60;
+  const aiScore = Math.floor(Math.random() * 100);
+  const humanScore = 100 - aiScore;
+  const verdict = aiScore > 50 ? "Likely AI-generated" : "Likely human-written";
 
-  res.json({
-    ai_score: aiScore,
-    human_score: 100 - aiScore,
-    verdict: aiScore > 70 ? "Likely AI-generated" : "Likely Human-written"
-  });
+  res.json({ ai_score: aiScore, human_score: humanScore, verdict });
 });
 
-// Humanize
-app.post("/humanize", async (req, res) => {
+
+app.post("/humanize", (req, res) => {
   const { text } = req.body;
-  if (!text) return res.status(400).json({ error: "Text required" });
+  if (!text) return res.status(400).json({ error: "text required" });
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: "Rewrite the text to sound natural, human, informal, and non-AI detectable."
-      },
-      {
-        role: "user",
-        content: text
-      }
-    ]
-  });
-
-  res.json({
-    rewritten_text: completion.choices[0].message.content
-  });
+  const humanizedText = text + " (humanized)";
+  res.json({ original: text, humanized: humanizedText });
 });
 
-// Detect + Rewrite 
-app.post("/detect-and-rewrite", async (req, res) => {
-  const { text } = req.body;
-  if (!text) return res.status(400).json({ error: "Text required" });
+const PORT = process.env.PORT || 3000;
 
-  const aiScore = Math.floor(Math.random() * 40) + 60;
-
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content:
-          "Rewrite the text to be fully human-like, varying sentence structure, tone, and vocabulary."
-      },
-      {
-        role: "user",
-        content: text
-      }
-    ]
-  });
-
-  res.json({
-    ai_score: aiScore,
-    human_score: 100 - aiScore,
-    rewritten_text: completion.choices[0].message.content
-  });
-});
-
-app.listen(process.env.PORT, () => {
-  console.log("🔥 API running on port " + process.env.PORT);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🔥 API running on port ${PORT}`);
 });
